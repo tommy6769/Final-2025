@@ -1,0 +1,13 @@
+version: '3.8'
+services: 
+  gameapptestauto:
+    image: 
+    build: .
+    container_name: 
+    ports:
+      - "80:3000"
+    environment:
+      - PORT=3000
+    volumes:
+      - ./:/app
+    command: ["node", "app.js"]
