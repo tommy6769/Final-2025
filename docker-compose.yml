@@ -3,7 +3,7 @@ services:
   gameapptestauto:
     image: tommy6769/final-project:latest 
     build: .
-    container_name: 
+    container_name: Final
     ports:
       - "80:3000"
     environment:
