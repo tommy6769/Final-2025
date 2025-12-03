@@ -35,7 +35,7 @@ pipeline {
                 label 'Final-Agent'
             }
             steps {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'Snyk-API-Token-Credential-CC', variable: 'SNYK_TOKEN')]) {
                     sh """
                         echo "Authenticating Snyk..."
                         snyk auth ${SNYK_TOKEN}
