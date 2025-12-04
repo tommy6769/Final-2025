@@ -6,6 +6,7 @@ pipeline {
         //credentials here later
         DOCKERHUB_CREDENTIALS = 'docker-id'
         IMAGE_NAME ='tommy6769/final-project:latest'
+        SNYK_TOKEN = 'Snyk-API-Token-Credential-CC'
     }
 
     stages {
