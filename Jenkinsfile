@@ -47,23 +47,23 @@ pipeline {
             }
         }
 
-        stage('Snyk-Container-Scan') {
-            agent {
-                label 'Final-Agent'
-            }
-            steps {
-                withCredentials([string(credentialsId: 'Snyk-API-Token-Credential-CC', variable: 'SNYK_TOKEN')]) {
-                    sh """
-                        echo "Authenticating Snyk..."
-                        snyk auth ${SNYK_TOKEN}
 
-                        echo "Running Snyk container scan for ${IMAGE_NAME}..."
-                        snyk container test ${IMAGE_NAME} --file=Dockerfile --severity-threshold=medium
-                    """
+// Scan the things
+        stage('SAST-TEST')
+        {
+            agent any
+            steps
+            {
+                script 
+                {
+                    snykSecurity(
+                        snykInstallation: 'Snyk-installations',
+                        snykTokenId: 'Snyk-API-Token-Credential-CC',
+                        severity: 'critical'
+                    )
                 }
             }
         }
-
         stage('Post-To-Dockerhub') {    
             agent {
                 label 'Final-Agent'
