@@ -30,7 +30,7 @@ pipeline {
                     catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                         snykSecurity(
                             snykInstallation: 'Snyk-installations',
-                            snykTokenId: 'Snyk-API-token',
+                            snykTokenId: 'Snyk-API-Token-Credential-CC',
                             severity: 'critical'
                         )
                     }
@@ -92,6 +92,9 @@ pipeline {
            TRIVY SCAN (NON-BLOCKING)
         -------------------------------------------------------------------*/
         stage("SECURITY-IMAGE-SCANNER") {
+            agent {
+                label 'Final-Agent'
+            }
             steps {
                 script {
                     echo "Running Trivy scan..."
