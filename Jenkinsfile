@@ -10,7 +10,7 @@ pipeline {
       
         TRIVY_SEVERITY = "HIGH,CRITICAL"
 
-        TARGET_URL = "http://172.238.185.189/" - appserver 
+        TARGET_URL = "http://172.238.185.189/" 
         REPORT_HTML = "zap_report.html"
         REPORT_JSON = "zap_report.json"
         ZAP_IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
