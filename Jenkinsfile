@@ -63,7 +63,7 @@ pipeline {
            DOCKER BUILD (BLOCKING)
         -------------------------------------------------------------------*/
         stage('BUILD-AND-TAG') {
-            agent { label 'FInal-Agent' }
+            agent { label 'Final-Agent' }
             steps {
                 script {
                     echo "Building Docker image ${IMAGE_NAME}..."
