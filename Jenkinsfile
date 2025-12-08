@@ -104,7 +104,8 @@ pipeline {
                 echo 'Deployment completed successfully!'
             }
         }
-       post {
+    }
+    post {
         always {
             publishHTML(target: [
                 reportName: 'Trivy Image Security Report',
@@ -121,5 +122,4 @@ pipeline {
             ])
         }
     }
-    }  
 }
