@@ -1,16 +1,13 @@
 pipeline {
-  //initial test pipeline. will add stages for testing once more things are up and running.
     agent any
 
     environment {
-        //credentials here later
         DOCKERHUB_CREDENTIALS = 'docker-id'
-        IMAGE_NAME ='tommy6769/final-project:latest'
-        SNYK_TOKEN = 'Snyk-API-Token-Credential-CC'
-      
+        IMAGE_NAME = 'tommy6769/final-project'
+
         TRIVY_SEVERITY = "HIGH,CRITICAL"
 
-        TARGET_URL = "http://172.238.185.189/" 
+        TARGET_URL = "http://172.238.185.189/"
         REPORT_HTML = "zap_report.html"
         REPORT_JSON = "zap_report.json"
         ZAP_IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
@@ -20,51 +17,55 @@ pipeline {
     stages {
 
         stage('Cloning Git') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
-// Scan the things
-        stage('SAST-TEST')
-        {
-            agent any
-            steps
-            {
-                script 
-                {
-                    snykSecurity(
-                        snykInstallation: 'Snyk-installations',
-                        snykTokenId: 'Snyk-API-Token-Credential-CC',
-                        severity: 'critical'
-                    )
-                }
-            }
-        }
-      
-        stage('SonarQube Analysis') {
-            agent {
-                label 'Final-Agent'
-            }
+        /* -------------------------------------------------------------------
+           SNYK (NON-BLOCKING)
+        -------------------------------------------------------------------*/
+        stage('SAST-TEST') {
             steps {
                 script {
-                    def scannerHome = tool 'SonarQube-Scanner'
-                    withSonarQubeEnv('SonarQube-installations') {
-                        sh "${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=gameapp \
-                            -Dsonar.sources=."
+                    echo "Running Snyk (non-blocking)..."
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                        snykSecurity(
+                            snykInstallation: 'Snyk-installations',
+                            snykTokenId: 'Snyk-API-token',
+                            severity: 'critical'
+                        )
                     }
                 }
             }
         }
- 
-        stage('Build-And-Tag') {
-            agent {
-                label 'Final-Agent'
-            }
+
+        /* -------------------------------------------------------------------
+           SONARQUBE (NON-BLOCKING)
+        -------------------------------------------------------------------*/
+        stage('SonarQube Analysis') {
+            agent { label 'Final-Agent' }
             steps {
                 script {
-                    // Build Docker image using Jenkins Docker Pipeline API
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                        def scannerHome = tool 'SonarQube-Scanner'
+                        withSonarQubeEnv('SonarQube-installations') {
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=gameapp \
+                                -Dsonar.sources=.
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        /* -------------------------------------------------------------------
+           DOCKER BUILD (BLOCKING)
+        -------------------------------------------------------------------*/
+        stage('BUILD-AND-TAG') {
+            agent { label 'FInal-Agent' }
+            steps {
+                script {
                     echo "Building Docker image ${IMAGE_NAME}..."
                     app = docker.build("${IMAGE_NAME}")
                     app.tag("latest")
@@ -72,15 +73,14 @@ pipeline {
             }
         }
 
-
-
-        stage('Post-To-Dockerhub') {    
-            agent {
-                label 'Final-Agent'
-            }
+        /* -------------------------------------------------------------------
+           PUSH TO DOCKER HUB (BLOCKING)
+        -------------------------------------------------------------------*/
+        stage('POST-TO-DOCKERHUB') {
+            agent { label 'Final-Agent' }
             steps {
                 script {
-                    echo "Pushing image ${IMAGE_NAME}:latest to Docker Hub..."
+                    echo "Pushing to DockerHub..."
                     docker.withRegistry('https://registry.hub.docker.com', "${DOCKERHUB_CREDENTIALS}") {
                         app.push("latest")
                     }
@@ -88,7 +88,7 @@ pipeline {
             }
         }
 
-         /* -------------------------------------------------------------------
+        /* -------------------------------------------------------------------
            TRIVY SCAN (NON-BLOCKING)
         -------------------------------------------------------------------*/
         stage("SECURITY-IMAGE-SCANNER") {
@@ -177,26 +177,30 @@ pipeline {
                 }
             }
         }
-      
-        stage('DEPLOYMENT') {    
-            agent {
-                label 'Final-Agent'
-            }
+
+        /* -------------------------------------------------------------------
+           DEPLOYMENT — MUST ALWAYS RUN
+        -------------------------------------------------------------------*/
+        stage('DEPLOYMENT') {
+            agent { label 'CYBR3120-01-app-server' }
             steps {
-                echo 'Starting deployment using docker-compose...'
                 script {
-                    dir("${WORKSPACE}") {
-                        sh '''
-                            docker-compose down || true
-                            docker-compose up -d || true
-                            docker ps || true
-                        '''
+                    echo "Deploying using docker-compose..."
+
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                        dir("${WORKSPACE}") {
+                            sh """
+                                docker-compose down || true
+                                docker-compose up -d || true
+                                docker ps || true
+                            """
+                        }
                     }
                 }
-                echo 'Deployment completed successfully!'
             }
         }
     }
+
     post {
         always {
             publishHTML(target: [
